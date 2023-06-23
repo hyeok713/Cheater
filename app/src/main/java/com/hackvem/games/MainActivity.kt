@@ -2,6 +2,7 @@ package com.hackvem.games
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
 
 /**
  * MainActivity
@@ -10,16 +11,9 @@ import androidx.activity.ComponentActivity
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        val rouletteView = RouletteView()
-//
-//        // Update player 1 position
-//        rouletteView.updatePlayerPosition(playerIndex = 0, newPosition = Offset(0f, 0f))
-//
-//        // Update player 2 position
-//        rouletteView.updatePlayerPosition(playerIndex = 1, newPosition = Offset(0f, 0f))
-//
-//        setContent {
-//            rouletteView.Content()
-//        }
+
+        setContent {
+            RouletteWheel()
+        }
     }
 }
