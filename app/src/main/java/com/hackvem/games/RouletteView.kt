@@ -1,6 +1,8 @@
 package com.hackvem.games
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,26 +23,27 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.lang.Math.cos
 import java.lang.Math.sin
-import kotlin.math.absoluteValue
+import java.util.*
 
 @Composable
 fun RouletteWheel(
-    itemList: List<String> = listOf(
-        "hackvem",
-        "hackve",
-        "hackvem",
-        "hackvem",
+    userList: List<String> = listOf(
+        "1",
+        "2",
+        "3",
+        "4",
     ),
+    targetUser: Int = -1,
 ) {
-    // TODO : 누가 타겟인지 설정해서 각도 설정 한다.
-    var targetValue = 3060f
+    // 20 turn + random / 20 turn + target angle
+    val targetValue: Float = getTargetAngle(targetUser, userList.size)
+
     // set colors randomly
-    val colors = COLOR_LIST.shuffled().subList(0, itemList.size)
+    val colors = COLOR_LIST.shuffled().subList(0, userList.size)
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
@@ -55,15 +58,18 @@ fun RouletteWheel(
                 durationMillis = 5000,
                 easing = FastOutSlowInEasing,
             ),
+            finishedListener = {
+                /* TODO:  */
+            }
         )
 
 
-        Canvas(modifier = Modifier.fillMaxSize(0.9f)) {
-
-
+        Canvas(
+            modifier = Modifier.fillMaxSize(0.9f)
+        ) {
             rotate(animatedProgress) {
                 drawRouletteWheel(
-                    itemList,
+                    userList,
                     colors
                 )
             }
@@ -88,7 +94,7 @@ fun RouletteWheel(
                 ) {
                     Icon(
                         painter = painterResource(id = R.drawable.ic_start),
-                        contentDescription = "시작버튼",
+                        contentDescription = "Start Button",
                     )
                 }
             }
@@ -96,6 +102,24 @@ fun RouletteWheel(
     }
 }
 
+/**
+ * getTargetAngle()
+ * @param targetIndex Int
+ *
+ * get target angle randomly
+ * if targetIndex is positive digit,
+ * specify angle for target. otherwise get random angle
+ */
+private fun getTargetAngle(targetIndex: Int, size: Int): Float {
+    return (
+            (if (targetIndex >= 0) {
+                random(ROUND_ANGLE.toInt()) + random(size / ROUND_ANGLE.toInt())
+            } else {
+                random(ROUND_ANGLE.toInt())
+            }) + 3600).toFloat()
+}
+
+fun random(bound: Int, adit: Int = 0) = Random().nextInt(bound) + adit
 private const val ROUND_ANGLE = 360f
 
 private val COLOR_LIST = listOf(
@@ -112,7 +136,8 @@ private val COLOR_LIST = listOf(
 /**
  * drawRouletteWheel
  * @param itemList List<String>
- * - requires string item list to put text each surface of parts
+ *
+ * requires string item list to put text each surface of parts
  */
 private fun DrawScope.drawRouletteWheel(
     itemList: List<String>,
