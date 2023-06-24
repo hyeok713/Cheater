@@ -21,10 +21,12 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.lang.Math.cos
 import java.lang.Math.sin
+import kotlin.math.absoluteValue
 
 @Composable
 fun RouletteWheel(
@@ -35,42 +37,31 @@ fun RouletteWheel(
         "hackvem",
     ),
 ) {
-    var isStarted by remember { mutableStateOf(false) }
+    // TODO : 누가 타겟인지 설정해서 각도 설정 한다.
+    var targetValue = 3060f
+    // set colors randomly
+    val colors = COLOR_LIST.shuffled().subList(0, itemList.size)
+
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
 
-        val infiniteTransition = rememberInfiniteTransition()
+        var isStarted by remember { mutableStateOf(false) }
 
-        val rotation: Float by infiniteTransition.animateFloat(
-            initialValue = 0f,
-            targetValue = 3060f,    // set targetValue randomly
-            animationSpec = infiniteRepeatable(
-                animation = tween<Float>(
-                    durationMillis = 5000,
-                    easing = FastOutSlowInEasing,
-                ),
-            )
+        val animatedProgress by animateFloatAsState(
+            targetValue = if (!isStarted) 0f else targetValue,
+            animationSpec = tween(
+                durationMillis = 5000,
+                easing = FastOutSlowInEasing,
+            ),
         )
 
-        val animatedProgress = animateFloatAsState(
-            targetValue = 3060f,
-            animationSpec = repeatable(
-                iterations = 2,
-                animation = tween<Float>(
-                    durationMillis = 5000,
-                    easing = FastOutSlowInEasing,
-                ),
-                repeatMode = RepeatMode.Reverse
-            )
-        )
-
-
-        val colors = COLOR_LIST.shuffled().subList(0, itemList.size)
 
         Canvas(modifier = Modifier.fillMaxSize(0.9f)) {
-            rotate(animatedProgress.value) {
+
+
+            rotate(animatedProgress) {
                 drawRouletteWheel(
                     itemList,
                     colors
@@ -78,23 +69,28 @@ fun RouletteWheel(
             }
         }
 
-        Icon(
-            painter = painterResource(id = R.drawable.ic_arrow),
-            contentDescription = "Arrow Icon",
-            modifier = Modifier
-                .size(48.dp)
-                .offset(0.dp, -(maxWidth / 2))
-        )
 
-        if (!isStarted) {
-            IconButton(
-                onClick = { isStarted = true },
-                modifier = Modifier.size(128.dp)
-            ) {
+        when (isStarted) {
+            true -> {
                 Icon(
-                    painter = painterResource(id = R.drawable.ic_start),
-                    contentDescription = "시작버튼",
+                    painter = painterResource(id = R.drawable.ic_arrow),
+                    contentDescription = "Arrow Icon",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .offset(0.dp, -(maxWidth / 2))
                 )
+            }
+
+            false -> {
+                IconButton(
+                    onClick = { isStarted = true },
+                    modifier = Modifier.size(128.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_start),
+                        contentDescription = "시작버튼",
+                    )
+                }
             }
         }
     }
