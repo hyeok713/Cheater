@@ -4,10 +4,8 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
@@ -29,15 +27,22 @@ import java.lang.Math.cos
 import java.lang.Math.sin
 import java.util.*
 
+private const val ROUND_ANGLE = 360f
+private val COLOR_LIST = listOf(
+    Color.Red.copy(blue = 0.1f, green = 0.2f),
+    Color.Magenta,
+    Color.Yellow,
+    Color.Green,
+    Color.Blue.copy(green = 0.5f),
+    Color.Cyan,
+    Color.Yellow.copy(red = 0.1f, blue = 0.4f, green = 0.6f),
+    Color.Red.copy(red = 0.6f, blue = 0.3f)
+)
+
 @Composable
 fun RouletteWheel(
-    userList: List<String> = listOf(
-        "1",
-        "2",
-        "3",
-        "4",
-    ),
-    targetUser: Int = -1,
+    userList: List<String> = listOf("1", "2", "3", "4","5","6"),
+    targetUser: Int = 0,
 ) {
     // 20 turn + random / 20 turn + target angle
     val targetValue: Float = getTargetAngle(targetUser, userList.size)
@@ -49,8 +54,8 @@ fun RouletteWheel(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-
         var isStarted by remember { mutableStateOf(false) }
+        var isFinished by remember { mutableStateOf(false) }
 
         val animatedProgress by animateFloatAsState(
             targetValue = if (!isStarted) 0f else targetValue,
@@ -60,9 +65,9 @@ fun RouletteWheel(
             ),
             finishedListener = {
                 /* TODO:  */
+                isFinished = true
             }
         )
-
 
         Canvas(
             modifier = Modifier.fillMaxSize(0.9f)
@@ -74,7 +79,6 @@ fun RouletteWheel(
                 )
             }
         }
-
 
         when (isStarted) {
             true -> {
@@ -101,37 +105,6 @@ fun RouletteWheel(
         }
     }
 }
-
-/**
- * getTargetAngle()
- * @param targetIndex Int
- *
- * get target angle randomly
- * if targetIndex is positive digit,
- * specify angle for target. otherwise get random angle
- */
-private fun getTargetAngle(targetIndex: Int, size: Int): Float {
-    return (
-            (if (targetIndex >= 0) {
-                random(ROUND_ANGLE.toInt()) + random(size / ROUND_ANGLE.toInt())
-            } else {
-                random(ROUND_ANGLE.toInt())
-            }) + 3600).toFloat()
-}
-
-fun random(bound: Int, adit: Int = 0) = Random().nextInt(bound) + adit
-private const val ROUND_ANGLE = 360f
-
-private val COLOR_LIST = listOf(
-    Color.Red.copy(blue = 0.1f, green = 0.2f),
-    Color.Magenta,
-    Color.Yellow,
-    Color.Green,
-    Color.Blue.copy(green = 0.5f),
-    Color.Cyan,
-    Color.Yellow.copy(red = 0.1f, blue = 0.4f, green = 0.6f),
-    Color.Red.copy(red = 0.6f, blue = 0.3f)
-)
 
 /**
  * drawRouletteWheel
@@ -167,7 +140,7 @@ private fun DrawScope.drawRouletteWheel(
     }
 
     repeat(itemList.size) { index ->
-        val startAngle = angle * index
+        val startAngle = angle * index - 90
 
         // Draw the split part
         drawArc(
@@ -202,3 +175,29 @@ private fun DrawScope.drawRouletteWheel(
 fun PreviewRouletteWheel() {
     RouletteWheel()
 }
+
+/**
+ * getTargetAngle
+ * @param targetIndex Int
+ *
+ * get target angle randomly
+ * if targetIndex is positive digit,
+ * specify angle for target. otherwise get random angle
+ */
+private fun getTargetAngle(targetIndex: Int, size: Int): Float {
+    return (
+            (if (targetIndex >= 0) {
+                val value = ROUND_ANGLE.toInt() - random(ROUND_ANGLE.toInt() / size)
+                println(ROUND_ANGLE.toInt() - random(ROUND_ANGLE.toInt() / size))
+                value
+            } else {
+                random(ROUND_ANGLE.toInt())
+            }) + 3600).toFloat()
+}
+
+/**
+ * random
+ * @param bound Int
+ * @param from Int
+ */
+fun random(bound: Int, from: Int = 0) = Random().nextInt(bound) + from
