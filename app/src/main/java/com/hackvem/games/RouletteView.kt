@@ -219,7 +219,6 @@ private fun getTargetAngle(targetIndex: Int, size: Int): Float {
         rand(ROUND_ANGLE.toInt())
     }.toFloat()
 
-    println("result: $result")
     return result
 }
 
