@@ -1,18 +1,21 @@
 package com.hackvem.games
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -22,11 +25,10 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.lang.Math.cos
-import java.lang.Math.sin
 import java.util.*
 
 private const val ROUND_ANGLE = 360f
@@ -41,13 +43,15 @@ private val COLOR_LIST = listOf(
     Color.Red.copy(red = 0.6f, blue = 0.3f)
 )
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun RouletteWheel(
-    userList: List<String> = listOf("1", "2", "3", "4"),
+    userList: List<String> = listOf("dog", "cat", "human", "monkey"),
     targetUser: Int = -1,
 ) {
     // 20 turn + random / 20 turn + target angle
     var targetValue: Float = getTargetAngle(targetUser, userList.size)
+    var targetState by remember { mutableStateOf("") }
 
     // set colors randomly
     val colors = COLOR_LIST.shuffled().subList(0, userList.size)
@@ -62,13 +66,10 @@ fun RouletteWheel(
         val animatedProgress by animateFloatAsState(
             targetValue = if (!isStarted) 0f else targetValue,
             animationSpec = tween(
-                durationMillis = if (isStarted) 1000 else 1000,
+                durationMillis = if (isStarted) 3000 else 1000,
                 easing = FastOutSlowInEasing,
             ),
-            finishedListener = {
-                /* TODO:  */
-                isFinished = true
-            }
+            finishedListener = { isFinished = true }
         )
 
         Canvas(
@@ -89,18 +90,34 @@ fun RouletteWheel(
                     contentDescription = "Arrow Icon",
                     modifier = Modifier
                         .size(48.dp)
-                        .offset(0.dp, -(maxWidth / 2))
+                        .offset(0.dp, -(maxWidth / 2) + 5.dp)
                 )
             }
 
             false -> {
-                IconButton(
-                    onClick = { isStarted = true },
-                    modifier = Modifier.size(128.dp)
+                Box(
+                    modifier = Modifier
+                        .background(
+                            color = Color.Black.copy(alpha = 0.8f),
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                        .border(
+                            width = 2.dp,
+                            color = Color.White,
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                        .blur(10.dp)
+                        .clickable {
+                            isStarted = true
+                            isFinished = false
+                        }
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_start),
-                        contentDescription = "Start Button",
+                    Text(
+                        text = "START",
+                        color = Color.White,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -108,26 +125,49 @@ fun RouletteWheel(
 
         when (isFinished) {
             true -> {
-                IconButton(
-                    onClick = {
-                        isStarted = false
-                        isFinished = false
-                        targetValue = getTargetAngle(targetUser, userList.size)
-                    },
-                    modifier = Modifier
-                        .size(48.dp)
-                        .offset(0.dp, maxWidth / 2 + 20.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_arrow),
-                        contentDescription = "Arrow Icon",
-                    )
+                if (isStarted) {
+                    targetState = userList[((targetValue - 3600) / (ROUND_ANGLE / userList.size)).toInt()]
+                    // Let 'Restart button' visible
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = Color.Black.copy(alpha = 0.8f),
+                                shape = RoundedCornerShape(32.dp)
+                            )
+                            .blur(10.dp)
+                            .clickable {
+                                isStarted = false
+                                isFinished = false
+                                targetValue = getTargetAngle(targetUser, userList.size)
+                                targetState = ""
+                            }
+                    ) {
+                        Text(
+                            text = "RE-START",
+                            color = Color.White,
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 
-            false -> {
+            false -> {}
+        }
 
-            }
+        AnimatedContent(
+            targetState = targetState,
+            transitionSpec = {
+                slideInVertically { it } with slideOutVertically { -it }
+            },
+            modifier = Modifier.offset(0.dp, maxWidth / 2 + 20.dp)
+        ) {
+            Text(
+                text = it,
+                fontSize = 30.sp,
+                color = Color.Black
+            )
         }
     }
 }
@@ -182,9 +222,11 @@ private fun DrawScope.drawRouletteWheel(
         // Calculate the position of the text
         val textAngle = startAngle + angle / 2
         val textX =
-            centerX + (wheelRadius / 1.5f - textSize / 2) * cos(Math.toRadians(textAngle.toDouble())).toFloat()
+            centerX + (wheelRadius / 1.5f - textSize / 2) * kotlin.math.cos(Math.toRadians(textAngle.toDouble()))
+                .toFloat()
         val textY =
-            centerY + (wheelRadius / 1.5f - textSize / 2) * sin(Math.toRadians(textAngle.toDouble())).toFloat()
+            centerY + (wheelRadius / 1.5f - textSize / 2) * kotlin.math.sin(Math.toRadians(textAngle.toDouble()))
+                .toFloat()
 
         // Draw the text
         drawContext.canvas.nativeCanvas.drawText(
@@ -217,14 +259,14 @@ private fun getTargetAngle(targetIndex: Int, size: Int): Float {
         rand(maxAngle, maxAngle - angle + 1)
     } else {
         rand(ROUND_ANGLE.toInt())
-    }.toFloat()
+    } + 3600.toFloat()
 
     return result
 }
 
 /**
  * random
- * @param bound Int
+ * @param to Int
  * @param from Int
  */
-fun rand(to: Int, from: Int = 0) : Int = Random().nextInt(to - from) + from
+fun rand(to: Int, from: Int = 0): Int = Random().nextInt(to - from) + from
