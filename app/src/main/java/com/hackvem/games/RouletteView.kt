@@ -1,5 +1,7 @@
 package com.hackvem.games
 
+import android.annotation.SuppressLint
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
@@ -10,8 +12,9 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +28,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -43,12 +47,17 @@ private val COLOR_LIST = listOf(
     Color.Red.copy(red = 0.6f, blue = 0.3f)
 )
 
-@OptIn(ExperimentalAnimationApi::class)
+@SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+@OptIn(ExperimentalAnimationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun RouletteWheel(
     userList: List<String> = listOf("dog", "cat", "human", "monkey"),
     targetUser: Int = -1,
 ) {
+    val gameController = LocalGameControllerProvider.current
+
+    BackHandler(true) { gameController.selectGame(GameType.IDLE) }
+
     // 20 turn + random / 20 turn + target angle
     var targetValue: Float = getTargetAngle(targetUser, userList.size)
     var targetState by remember { mutableStateOf("") }
@@ -56,94 +65,79 @@ fun RouletteWheel(
     // set colors randomly
     val colors = COLOR_LIST.shuffled().subList(0, userList.size)
 
-    BoxWithConstraints(
+    Scaffold(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        topBar = {
+            TopAppBar(
+                title = { Text(text = stringResource(R.string.game_roulette)) },
+                navigationIcon = {
+                    Icon(
+                        imageVector = Icons.Filled.ArrowBack,
+                        contentDescription = "Back Button",
+                        modifier = Modifier.clickable { gameController.selectGame(GameType.IDLE) }
+                    )
+                }
+            )
+        },
     ) {
-        var isStarted by remember { mutableStateOf(false) }
-        var isFinished by remember { mutableStateOf(false) }
-
-        val animatedProgress by animateFloatAsState(
-            targetValue = if (!isStarted) 0f else targetValue,
-            animationSpec = tween(
-                durationMillis = if (isStarted) 3000 else 1000,
-                easing = FastOutSlowInEasing,
-            ),
-            finishedListener = { isFinished = true }
-        )
-
-        Canvas(
-            modifier = Modifier.fillMaxSize(0.9f)
+        BoxWithConstraints(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
         ) {
-            rotate(animatedProgress) {
-                drawRouletteWheel(
-                    userList,
-                    colors
-                )
-            }
-        }
+            var isStarted by remember { mutableStateOf(false) }
+            var isFinished by remember { mutableStateOf(false) }
 
-        when (isStarted) {
-            true -> {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_arrow),
-                    contentDescription = "Arrow Icon",
-                    modifier = Modifier
-                        .size(48.dp)
-                        .offset(0.dp, -(maxWidth / 2) + 5.dp)
-                )
-            }
+            val animatedProgress by animateFloatAsState(
+                targetValue = if (!isStarted) 0f else targetValue,
+                animationSpec = tween(
+                    durationMillis = if (isStarted) 3000 else 1000,
+                    easing = FastOutSlowInEasing,
+                ),
+                finishedListener = { isFinished = true }
+            )
 
-            false -> {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .border(
-                            width = 2.dp,
-                            color = Color.White,
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .blur(10.dp)
-                        .clickable {
-                            isStarted = true
-                            isFinished = false
-                        }
-                ) {
-                    Text(
-                        text = "START",
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+            Canvas(
+                modifier = Modifier.fillMaxSize(0.9f)
+            ) {
+                rotate(animatedProgress) {
+                    drawRouletteWheel(
+                        userList,
+                        colors
                     )
                 }
             }
-        }
 
-        when (isFinished) {
-            true -> {
-                if (isStarted) {
-                    targetState = userList[((targetValue - 3600) / (ROUND_ANGLE / userList.size)).toInt()]
-                    // Let 'Restart button' visible
+            when (isStarted) {
+                true -> {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_arrow),
+                        contentDescription = "Arrow Icon",
+                        modifier = Modifier
+                            .size(48.dp)
+                            .offset(0.dp, -(maxWidth / 2) + 5.dp)
+                    )
+                }
+
+                false -> {
                     Box(
                         modifier = Modifier
                             .background(
                                 color = Color.Black.copy(alpha = 0.8f),
                                 shape = RoundedCornerShape(32.dp)
                             )
+                            .border(
+                                width = 2.dp,
+                                color = Color.White,
+                                shape = RoundedCornerShape(32.dp)
+                            )
                             .blur(10.dp)
                             .clickable {
-                                isStarted = false
+                                isStarted = true
                                 isFinished = false
-                                targetValue = getTargetAngle(targetUser, userList.size)
-                                targetState = ""
                             }
                     ) {
                         Text(
-                            text = "RE-START",
+                            text = "START",
                             color = Color.White,
                             fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
@@ -153,21 +147,53 @@ fun RouletteWheel(
                 }
             }
 
-            false -> {}
-        }
+            when (isFinished) {
+                true -> {
+                    if (isStarted) {
+                        targetState =
+                            userList[((targetValue - 3600) / (ROUND_ANGLE / userList.size)).toInt()]
+                        // Let 'Restart button' visible
+                        Box(
+                            modifier = Modifier
+                                .background(
+                                    color = Color.Black.copy(alpha = 0.8f),
+                                    shape = RoundedCornerShape(32.dp)
+                                )
+                                .blur(10.dp)
+                                .clickable {
+                                    isStarted = false
+                                    isFinished = false
+                                    targetValue = getTargetAngle(targetUser, userList.size)
+                                    targetState = ""
+                                }
+                        ) {
+                            Text(
+                                text = "RE-START",
+                                color = Color.White,
+                                fontSize = 32.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                }
 
-        AnimatedContent(
-            targetState = targetState,
-            transitionSpec = {
-                slideInVertically { it } with slideOutVertically { -it }
-            },
-            modifier = Modifier.offset(0.dp, maxWidth / 2 + 20.dp)
-        ) {
-            Text(
-                text = it,
-                fontSize = 30.sp,
-                color = Color.Black
-            )
+                false -> {}
+            }
+
+            AnimatedContent(
+                targetState = targetState,
+                transitionSpec = {
+                    slideInVertically { it } with slideOutVertically { -it }
+                },
+                modifier = Modifier.offset(0.dp, maxWidth / 2 + 20.dp)
+            ) {
+                Text(
+                    text = it,
+                    fontSize = 30.sp,
+                    color = Color.Black
+                )
+            }
         }
     }
 }
