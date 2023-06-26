@@ -4,8 +4,10 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
@@ -41,11 +43,11 @@ private val COLOR_LIST = listOf(
 
 @Composable
 fun RouletteWheel(
-    userList: List<String> = listOf("1", "2", "3", "4","5","6"),
-    targetUser: Int = 0,
+    userList: List<String> = listOf("1", "2", "3", "4"),
+    targetUser: Int = -1,
 ) {
     // 20 turn + random / 20 turn + target angle
-    val targetValue: Float = getTargetAngle(targetUser, userList.size)
+    var targetValue: Float = getTargetAngle(targetUser, userList.size)
 
     // set colors randomly
     val colors = COLOR_LIST.shuffled().subList(0, userList.size)
@@ -60,7 +62,7 @@ fun RouletteWheel(
         val animatedProgress by animateFloatAsState(
             targetValue = if (!isStarted) 0f else targetValue,
             animationSpec = tween(
-                durationMillis = 5000,
+                durationMillis = if (isStarted) 1000 else 1000,
                 easing = FastOutSlowInEasing,
             ),
             finishedListener = {
@@ -103,6 +105,30 @@ fun RouletteWheel(
                 }
             }
         }
+
+        when (isFinished) {
+            true -> {
+                IconButton(
+                    onClick = {
+                        isStarted = false
+                        isFinished = false
+                        targetValue = getTargetAngle(targetUser, userList.size)
+                    },
+                    modifier = Modifier
+                        .size(48.dp)
+                        .offset(0.dp, maxWidth / 2 + 20.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_arrow),
+                        contentDescription = "Arrow Icon",
+                    )
+                }
+            }
+
+            false -> {
+
+            }
+        }
     }
 }
 
@@ -140,7 +166,7 @@ private fun DrawScope.drawRouletteWheel(
     }
 
     repeat(itemList.size) { index ->
-        val startAngle = angle * index - 90
+        val startAngle = -(angle * index) - (90 + angle)
 
         // Draw the split part
         drawArc(
@@ -185,14 +211,16 @@ fun PreviewRouletteWheel() {
  * specify angle for target. otherwise get random angle
  */
 private fun getTargetAngle(targetIndex: Int, size: Int): Float {
-    return (
-            (if (targetIndex >= 0) {
-                val value = ROUND_ANGLE.toInt() - random(ROUND_ANGLE.toInt() / size)
-                println(ROUND_ANGLE.toInt() - random(ROUND_ANGLE.toInt() / size))
-                value
-            } else {
-                random(ROUND_ANGLE.toInt())
-            }) + 3600).toFloat()
+    val result = if (targetIndex + 1 > 0) {
+        val angle = ROUND_ANGLE.toInt() / size
+        val maxAngle = (targetIndex + 1) * angle
+        rand(maxAngle, maxAngle - angle + 1)
+    } else {
+        rand(ROUND_ANGLE.toInt())
+    }.toFloat()
+
+    println("result: $result")
+    return result
 }
 
 /**
@@ -200,4 +228,4 @@ private fun getTargetAngle(targetIndex: Int, size: Int): Float {
  * @param bound Int
  * @param from Int
  */
-fun random(bound: Int, from: Int = 0) = Random().nextInt(bound) + from
+fun rand(to: Int, from: Int = 0) : Int = Random().nextInt(to - from) + from
