@@ -58,9 +58,9 @@ fun RouletteGameNavHost(modifier: Modifier, navController: NavHostController) {
     NavHost(
         modifier = modifier,
         navController = navController,
-        startDestination = RouletteRoute.Setting.route
+        startDestination = RouletteRoute.Game.route
     ) {
-        composable(route = RouletteRoute.Setting.route) { RouletteCandidateView() }
+        composable(route = RouletteRoute.Setting.route) { RouletteCandidateView(navController) }
         composable(route = RouletteRoute.Game.route) { RouletteGameView() }
     }
 }

@@ -1,5 +1,6 @@
 package com.hackvem.games.screen.roulette
 
+import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -9,8 +10,12 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +29,7 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -32,6 +38,7 @@ import androidx.compose.ui.unit.sp
 import com.hackvem.games.LocalGameControllerProvider
 import com.hackvem.games.R
 import java.util.*
+import kotlin.math.atan2
 
 private const val ROUND_ANGLE = 360f
 private val COLOR_LIST = listOf(
@@ -45,13 +52,16 @@ private val COLOR_LIST = listOf(
     Color.Red.copy(red = 0.6f, blue = 0.3f)
 )
 
+@SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
 fun RouletteGameView(
-    userList: List<String> = listOf("dog", "cat", "human", "monkey"),
+//    userList: List<String> = listOf("", "", "", ""),
     targetUser: Int = -1,
 ) {
     val gameController = LocalGameControllerProvider.current
+
+    val userList by remember { mutableStateOf(mutableListOf("", "", "", "")) }
 
     BackHandler(false) {}
 
@@ -62,13 +72,25 @@ fun RouletteGameView(
     // set colors randomly
     val colors = COLOR_LIST.shuffled().subList(0, userList.size)
 
-
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         var isStarted by remember { mutableStateOf(false) }
         var isFinished by remember { mutableStateOf(false) }
+
+        var selectedAngle by remember { mutableStateOf(0f) }
+
+        LaunchedEffect(selectedAngle) {
+            // before game started
+            if (!isStarted && !isFinished) {
+                // when new angle get, calculate and put string value on target
+                val each = ROUND_ANGLE / userList.size // ex : 90
+                val index = (selectedAngle / each).toInt()
+
+                userList[index] = "Hello"
+            }
+        }
 
         val animatedProgress by animateFloatAsState(
             targetValue = if (!isStarted) 0f else targetValue,
@@ -79,14 +101,48 @@ fun RouletteGameView(
             finishedListener = { isFinished = true }
         )
 
+        var touchX by remember { mutableStateOf(0f) }
+        var touchY by remember { mutableStateOf(0f) }
+
         Canvas(
-            modifier = Modifier.fillMaxSize(0.9f)
+            modifier = Modifier
+                .fillMaxSize(0.9f)
+                .pointerInput(Unit) {
+                    detectTapGestures { tapGesture ->
+                        touchX = tapGesture.x
+                        touchY = tapGesture.y
+
+                        val centerX = size.width / 2f // X-coordinate of the center
+                        val centerY = size.height / 2f // Y-coordinate of the center
+
+                        val dx = touchX - centerX // Difference in X-coordinates
+                        val dy = touchY - centerY // Difference in Y-coordinates
+
+                        // Calculate the angle using the arctan2 function
+                        var angleRadians = atan2(dx, dy).toFloat()
+
+                        // Convert the angle to degrees
+                        var angleDegrees = Math
+                            .toDegrees(angleRadians.toDouble())
+                            .toFloat()
+
+                        // Wrap the angle within the range of 0 to 360 degrees
+                        if (angleDegrees < 0) {
+                            angleDegrees += 360f
+                        }
+
+                        val map = if (angleDegrees >= 180) {
+                            angleDegrees - 180f
+                        } else {
+                            angleDegrees + 180f
+                        }
+
+                        selectedAngle = map
+                    }
+                }
         ) {
             rotate(animatedProgress) {
-                drawRouletteWheel(
-                    userList,
-                    colors
-                )
+                drawRouletteWheel(userList)
             }
         }
 
@@ -104,6 +160,7 @@ fun RouletteGameView(
             false -> {
                 Box(
                     modifier = Modifier
+                        .offset(0.dp, maxWidth / 2 + 20.dp)
                         .background(
                             color = Color.Black.copy(alpha = 0.8f),
                             shape = RoundedCornerShape(32.dp)
@@ -118,6 +175,7 @@ fun RouletteGameView(
                             isStarted = true
                             isFinished = false
                         }
+
                 ) {
                     Text(
                         text = "START",
@@ -126,6 +184,25 @@ fun RouletteGameView(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
                     )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(0.dp, -(maxWidth / 2) + 10.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    if (userList.size > 2) {
+                        IconButton(onClick = { userList.removeLast() }) {
+                            Icon(Icons.Outlined.Delete, contentDescription = "Delete Icon")
+                        }
+                    }
+
+                    if (userList.size < 8) {
+                        IconButton(onClick = { userList.add("") }) {
+                            Icon(Icons.Default.Add, contentDescription = "Add Icon")
+                        }
+                    }
                 }
             }
         }
@@ -189,7 +266,6 @@ fun RouletteGameView(
  */
 private fun DrawScope.drawRouletteWheel(
     itemList: List<String>,
-    colors: List<Color>,
 ) {
     val wheelRadius = size.minDimension / 2
     val centerX = size.width / 2
@@ -219,7 +295,7 @@ private fun DrawScope.drawRouletteWheel(
 
         // Draw the split part
         drawArc(
-            color = colors[index],
+            color = COLOR_LIST[index],
             startAngle = startAngle,
             sweepAngle = angle,
             useCenter = true,
