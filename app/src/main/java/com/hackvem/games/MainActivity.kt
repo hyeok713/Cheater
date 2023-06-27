@@ -22,8 +22,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.compose.rememberNavController
-import kotlinx.coroutines.flow.MutableStateFlow
 
 /**
  * MainActivity
@@ -67,7 +65,7 @@ fun GamesScreen() {
 }
 
 @Composable
-fun GameBox(type: GameType, onClick: (GameType) -> Unit) {
+private fun GameBox(type: GameType, onClick: (GameType) -> Unit) {
     Box(
         modifier = Modifier
             .background(color = Color.Transparent, shape = RoundedCornerShape(36.dp))
@@ -84,24 +82,3 @@ fun GameBox(type: GameType, onClick: (GameType) -> Unit) {
     }
 }
 
-@Composable
-fun RouletteGame() {
-    val navController = rememberNavController()
-
-    RouletteWheel()
-}
-
-enum class GameType(val id: Int = -1, val screen: @Composable () -> Unit) {
-    IDLE(screen = {}),
-    ROULETTE(id = R.string.game_roulette, { RouletteGame() })
-}
-
-internal val LocalGameControllerProvider = staticCompositionLocalOf { GameController() }
-
-internal class GameController {
-    val selectedGameState = MutableStateFlow(GameType.IDLE)
-
-    fun selectGame(game: GameType) {
-        selectedGameState.value = game
-    }
-}

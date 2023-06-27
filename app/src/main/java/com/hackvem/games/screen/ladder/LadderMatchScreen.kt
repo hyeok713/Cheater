@@ -1,4 +1,4 @@
-package com.hackvem.games
+package com.hackvem.games.screen.ladder
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
