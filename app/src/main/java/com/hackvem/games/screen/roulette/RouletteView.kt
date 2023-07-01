@@ -4,8 +4,13 @@ import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +18,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Delete
@@ -21,9 +28,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -31,7 +43,9 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -69,28 +83,14 @@ fun RouletteGameView(
     var targetValue: Float = getTargetAngle(targetUser, userList.size)
     var targetState by remember { mutableStateOf("") }
 
-    // set colors randomly
-    val colors = COLOR_LIST.shuffled().subList(0, userList.size)
+    var isStarted by remember { mutableStateOf(false) }
+    var isFinished by remember { mutableStateOf(false) }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
-        var isStarted by remember { mutableStateOf(false) }
-        var isFinished by remember { mutableStateOf(false) }
-
-        var selectedAngle by remember { mutableStateOf(0f) }
-
-        LaunchedEffect(selectedAngle) {
-            // before game started
-            if (!isStarted && !isFinished) {
-                // when new angle get, calculate and put string value on target
-                val each = ROUND_ANGLE / userList.size // ex : 90
-                val index = (selectedAngle / each).toInt()
-
-                userList[index] = "Hello"
-            }
-        }
+        var selectedIndex by remember { mutableStateOf(-1) }
 
         val animatedProgress by animateFloatAsState(
             targetValue = if (!isStarted) 0f else targetValue,
@@ -108,6 +108,8 @@ fun RouletteGameView(
             modifier = Modifier
                 .fillMaxSize(0.9f)
                 .pointerInput(Unit) {
+                    if (isStarted || isFinished) return@pointerInput
+
                     detectTapGestures { tapGesture ->
                         touchX = tapGesture.x
                         touchY = tapGesture.y
@@ -119,7 +121,7 @@ fun RouletteGameView(
                         val dy = touchY - centerY // Difference in Y-coordinates
 
                         // Calculate the angle using the arctan2 function
-                        var angleRadians = atan2(dx, dy).toFloat()
+                        val angleRadians = atan2(dx, dy).toFloat()
 
                         // Convert the angle to degrees
                         var angleDegrees = Math
@@ -136,8 +138,22 @@ fun RouletteGameView(
                         } else {
                             angleDegrees + 180f
                         }
+                        println("map: $map")
+                        /**
+                         * when a section of roulette selected
+                         * it launches and calculate which target it is
+                         * then process let user input the target name indicating
+                         */
 
-                        selectedAngle = map
+                        // when new angle get, calculate and put string value on target
+                        val each = ROUND_ANGLE / userList.size // ex : 90
+
+
+                        // show input box layer
+//                            userList[index] = "Hello"
+                        selectedIndex = (map / each).toInt()
+                        println("selectedIndex: $selectedIndex")
+
                     }
                 }
         ) {
@@ -153,7 +169,8 @@ fun RouletteGameView(
                     contentDescription = "Arrow Icon",
                     modifier = Modifier
                         .size(48.dp)
-                        .offset(0.dp, -(maxWidth / 2) + 5.dp)
+                        .offset(0.dp, -(maxWidth / 2) + 15.dp),
+                    tint = Color.Unspecified
                 )
             }
 
@@ -170,7 +187,6 @@ fun RouletteGameView(
                             color = Color.White,
                             shape = RoundedCornerShape(32.dp)
                         )
-                        .blur(10.dp)
                         .clickable {
                             isStarted = true
                             isFinished = false
@@ -219,7 +235,6 @@ fun RouletteGameView(
                                 color = Color.Black.copy(alpha = 0.8f),
                                 shape = RoundedCornerShape(32.dp)
                             )
-                            .blur(10.dp)
                             .clickable {
                                 isStarted = false
                                 isFinished = false
@@ -254,8 +269,19 @@ fun RouletteGameView(
                 color = Color.Black
             )
         }
-    }
 
+        if (selectedIndex >= 0) {
+            // only if index is positive
+            InputBoxLayer(
+                targetIndex = selectedIndex,
+                originText = userList[selectedIndex],
+                color = COLOR_LIST[selectedIndex]
+            ) { index, text ->
+                userList[index] = text
+                selectedIndex = -1  // remove this layer
+            }
+        }
+    }
 }
 
 /**
@@ -322,6 +348,95 @@ private fun DrawScope.drawRouletteWheel(
         )
     }
 }
+
+/**
+ * InputBoxLayer
+ * TextField which enables target setting on selected spot
+ */
+@Preview
+@Composable
+fun InputBoxLayer(
+    targetIndex: Int = 0,
+    originText: String = "",
+    color: Color = Color.Yellow,
+    out: (Int, String) -> Unit = { _, _ -> }
+) {
+    val focusRequester = FocusRequester()
+
+    var text by remember { mutableStateOf(originText) }
+    val infiniteTransition = rememberInfiniteTransition()
+
+    val colorAnim by infiniteTransition.animateColor(
+        initialValue = color,
+        targetValue = color.copy(alpha = 0.2f),
+        animationSpec = infiniteRepeatable(
+            // Linearly interpolate between initialValue and targetValue every 1000ms.
+            animation = tween(1000, easing = LinearEasing),
+            // Once [TargetValue] is reached, starts the next iteration in reverse (i.e. from
+            // TargetValue to InitialValue). Then again from InitialValue to TargetValue. This
+            // [RepeatMode] ensures that the animation value is *always continuous*.
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(color = Color.Black.copy(alpha = 0.6f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = stringResource(id = R.string.enter_target),
+                fontSize = 16.sp,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            BasicTextField(
+                modifier = Modifier
+                    .border(
+                        border = BorderStroke(
+                            brush = Brush.horizontalGradient(
+                                0.1f to colorAnim,
+                                1f to colorAnim,
+                                tileMode = TileMode.Mirror
+                            ), width = 2.dp
+                        ), shape = RoundedCornerShape(45.dp)
+                    )
+                    .focusRequester(focusRequester),
+                value = text,
+                cursorBrush = SolidColor(color),
+                onValueChange = { str ->
+                    text = str
+                },
+                textStyle = LocalTextStyle.current.copy(
+                    fontSize = 24.sp,
+                    textAlign = TextAlign.Center,
+                    color = color
+                ),
+                decorationBox = { innerTextField ->
+                    Box(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        innerTextField()
+                    }
+
+                },
+                singleLine = true,
+                maxLines = 1,
+                keyboardActions = KeyboardActions {
+                    /* do when action */
+                    out(targetIndex, text)
+                },
+            )
+        }
+    }
+
+    SideEffect {
+        focusRequester.requestFocus()
+    }
+}
+
 
 @Preview
 @Composable

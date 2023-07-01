@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Cheater</string>
     <string name="game_roulette">Roulette Game</string>
+    <string name="enter_target">Enter new target.</string>
 </resources>

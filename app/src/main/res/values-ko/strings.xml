@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Cheater</string>
     <string name="game_roulette">룰렛 돌리기</string>
+    <string name="enter_target">새로운 타겟을 입력해 주세요.</string>
 </resources>
