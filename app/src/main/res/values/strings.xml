@@ -2,4 +2,7 @@
     <string name="app_name">Cheater</string>
     <string name="game_roulette">Roulette Game</string>
     <string name="enter_target">Enter new target.</string>
+    <string name="restart">RE-START</string>
+    <string name="start">START!</string>
+
 </resources>
