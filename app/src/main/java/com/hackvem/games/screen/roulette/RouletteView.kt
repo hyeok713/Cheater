@@ -3,19 +3,10 @@ package com.hackvem.games.screen.roulette
 import android.annotation.SuppressLint
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -27,19 +18,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
-import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -51,23 +39,11 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hackvem.games.LocalGameControllerProvider
 import com.hackvem.games.R
+import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.COLOR_LIST
+import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.MAX_CANDIDATE
+import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.MIN_CANDIDATE
+import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.ROUND_ANGLE
 import java.util.*
-
-private const val ROUND_ANGLE = 360f
-private const val MIN_CANDIDATE = 2
-private const val MAX_CANDIDATE = 8
-
-private val COLOR_LIST = listOf(
-    Color.Red.copy(blue = 0.1f, green = 0.2f),
-    Color.Magenta,
-    Color.Yellow,
-    Color.Green,
-    Color.Blue.copy(green = 0.5f),
-    Color.Cyan,
-    Color.Yellow.copy(red = 0.1f, blue = 0.4f, green = 0.6f),
-    Color.Red.copy(red = 0.6f, blue = 0.3f)
-)
-
 
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalAnimationApi::class)
@@ -76,15 +52,17 @@ fun RouletteGameView() {
     val viewModel: RouletteViewModel = hiltViewModel()
     val gameController = LocalGameControllerProvider.current
 
-    val userList by remember { mutableStateOf(mutableListOf("", "", "", "")) }
+    val targetList = remember { mutableStateListOf("", "", "", "") }
 
     BackHandler(false) {}
 
-    // 20 turn + random / 20 turn + target angle
-    var targetIndex by remember { mutableStateOf(-1) }  // Manipulated Index (target)
-    var targetValue: Float = getTargetAngle(targetIndex, userList.size)
+    var manipulatedTargetIndex by remember { mutableStateOf(-1) }  // Manipulated Index (target)
+    val targetValue: Float =
+        viewModel.getTargetAngle(manipulatedTargetIndex, ROUND_ANGLE.toInt() / targetList.size)
+
     var resultTarget by remember { mutableStateOf("") }
 
+    // states of game
     var isStarted by remember { mutableStateOf(false) }
     var isFinished by remember { mutableStateOf(false) }
 
@@ -113,18 +91,17 @@ fun RouletteGameView() {
 
                     detectTapGestures(
                         onDoubleTap = { doubleTapGesture ->
-                            targetIndex = viewModel.getIndexFromAngle(
+                            manipulatedTargetIndex = viewModel.getIndexFromAngle(
                                 doubleTapGesture,
                                 size,
-                                ROUND_ANGLE / userList.size
+                                ROUND_ANGLE / targetList.size
                             )
-                            println("targetIndex: $targetIndex")
                         },
                         onTap = { tapGesture ->
                             selectedIndex = viewModel.getIndexFromAngle(
                                 tapGesture,
                                 size,
-                                ROUND_ANGLE / userList.size
+                                ROUND_ANGLE / targetList.size
                             )
                         })
                 }
@@ -134,7 +111,7 @@ fun RouletteGameView() {
              * will be animating to targetValue, turns out rotate RouletteWheel
              */
             rotate(animatedProgress) {
-                drawRouletteWheel(userList)
+                drawRouletteWheel(targetList)
             }
         }
 
@@ -181,29 +158,42 @@ fun RouletteGameView() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(0.dp, -(maxWidth / 2) + 10.dp),
+                        .offset(0.dp, (maxWidth / 2) + 20.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    if (userList.size > MIN_CANDIDATE) {
-                        IconButton(onClick = { userList.removeLast() }) {
-                            Icon(Icons.Outlined.Delete, contentDescription = "Delete Icon")
-                        }
-                    }
+                    val isMin = targetList.size > MIN_CANDIDATE
+                    Icon(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .padding(end = 24.dp)
+                            .alpha(takeUnless { isMin }?.let { 0f } ?: 1f)
+                            .clickable { takeIf { isMin }?.let { targetList.removeLast() } },
+                        painter = painterResource(id = R.drawable.ic_minus),
+                        contentDescription = "Delete Icon"
+                    )
 
-                    if (userList.size < MAX_CANDIDATE) {
-                        IconButton(onClick = { userList.add("") }) {
-                            Icon(Icons.Default.Add, contentDescription = "Add Icon")
-                        }
-                    }
+
+                    val isMax = targetList.size < MAX_CANDIDATE
+                    Icon(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .padding(start = 24.dp)
+                            .alpha(takeUnless { isMax }?.let { 0f } ?: 1f)
+                            .clickable { takeIf { isMax }?.let { targetList.add("") } },
+                        painter = painterResource(id = R.drawable.ic_add),
+                        contentDescription = "Add Icon"
+                    )
                 }
             }
         }
+
+
 
         when (isFinished) {
             true -> {
                 if (isStarted) {
                     resultTarget =
-                        userList[((targetValue - 3600) / (ROUND_ANGLE / userList.size)).toInt()]
+                        targetList[viewModel.getResultIndex(targetValue,ROUND_ANGLE / targetList.size)]
                     // Let 'Restart button' visible
                     Box(
                         modifier = Modifier
@@ -214,7 +204,7 @@ fun RouletteGameView() {
                             .clickable {
                                 isStarted = false
                                 isFinished = false
-                                targetValue = getTargetAngle(targetIndex, userList.size)
+                                manipulatedTargetIndex = -1
                                 resultTarget = ""
                             }
                     ) {
@@ -252,10 +242,10 @@ fun RouletteGameView() {
             // only if index is positive
             InputBoxLayer(
                 targetIndex = selectedIndex,
-                originText = userList[selectedIndex],
+                originText = targetList[selectedIndex],
                 color = COLOR_LIST[selectedIndex]
             ) { index, text ->
-                userList[index] = text
+                targetList[index] = text
                 selectedIndex = -1  // remove this layer
             }
         }
@@ -337,7 +327,7 @@ fun InputBoxLayer(
     targetIndex: Int = 0,
     originText: String = "",
     color: Color = Color.Yellow,
-    out: (Int, String) -> Unit = { _, _ -> }
+    out: (Int, String) -> Unit = { _, _ -> },
 ) {
     val focusRequester = FocusRequester()
 
@@ -360,7 +350,13 @@ fun InputBoxLayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Black.copy(alpha = 0.6f)),
+            .background(color = Color.Black.copy(alpha = 0.6f))
+            .clickable(
+                // ensure that the top layer doesn't intercept any click events and is completely transparent to touch events.
+                enabled = true,
+                indication = null,
+                interactionSource = MutableInteractionSource()
+            ) {},
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -410,41 +406,14 @@ fun InputBoxLayer(
         }
     }
 
+    // this let text field be focused
     SideEffect {
         focusRequester.requestFocus()
     }
 }
-
 
 @Preview
 @Composable
 fun PreviewRouletteWheel() {
     RouletteGameView()
 }
-
-/**
- * getTargetAngle
- * @param targetIndex Int
- *
- * get target angle randomly
- * if targetIndex is positive digit,
- * specify angle for target. otherwise get random angle
- */
-private fun getTargetAngle(targetIndex: Int, size: Int): Float {
-    val result = if (targetIndex >= 0) {
-        val angle = ROUND_ANGLE.toInt() / size
-        val maxAngle = (targetIndex + 1) * angle
-        rand(maxAngle, maxAngle - angle + 1)
-    } else {
-        rand(ROUND_ANGLE.toInt())
-    } + 3600.toFloat()
-
-    return result
-}
-
-/**
- * random
- * @param to Int
- * @param from Int
- */
-fun rand(to: Int, from: Int = 0): Int = Random().nextInt(to - from) + from
