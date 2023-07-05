@@ -34,6 +34,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hackvem.games.GamesScreen
 import com.hackvem.games.LocalGameControllerProvider
 import com.hackvem.games.R
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.COLOR_LIST
@@ -62,8 +63,7 @@ fun RouletteGameView() {
     var resultTarget by remember { mutableStateOf("") }
 
     // states of game
-    var isStarted by remember { mutableStateOf(false) }
-    var isFinished by remember { mutableStateOf(false) }
+    var gameStatus by remember { mutableStateOf(GameStatus.READY) }
 
     BoxWithConstraints(
         modifier = Modifier.fillMaxSize(),
@@ -72,12 +72,15 @@ fun RouletteGameView() {
         var selectedIndex by remember { mutableStateOf(-1) } // Selected Index for label setting
 
         val animatedProgress by animateFloatAsState(
-            targetValue = if (!isStarted) 0f else targetValue,
+            targetValue = if (gameStatus == GameStatus.READY) 0f else targetValue,
             animationSpec = tween(
-                durationMillis = if (isStarted) 3000 else 1000,
+                durationMillis = if (gameStatus != GameStatus.READY) 3000 else 1000,
                 easing = FastOutSlowInEasing,
             ),
-            finishedListener = { isFinished = true }
+            finishedListener = {
+                // it generates by any direction. so distinguishing direction required
+                gameStatus = if (gameStatus == GameStatus.READY) GameStatus.READY else GameStatus.FINISHED
+            }
         )
 
         Canvas(
@@ -86,23 +89,24 @@ fun RouletteGameView() {
                 .pointerInput(Unit) {
                     // returns when roulette game started or finished
                     // this action will only work on the state of 'ready'
-                    if (isStarted || isFinished) return@pointerInput
-
-                    detectTapGestures(
-                        onDoubleTap = { doubleTapGesture ->
-                            manipulatedTargetIndex = viewModel.getIndexFromAngle(
-                                doubleTapGesture,
-                                size,
-                                ROUND_ANGLE / targetList.size
-                            )
-                        },
-                        onTap = { tapGesture ->
-                            selectedIndex = viewModel.getIndexFromAngle(
-                                tapGesture,
-                                size,
-                                ROUND_ANGLE / targetList.size
-                            )
-                        })
+                    if (gameStatus == GameStatus.READY) {
+                        detectTapGestures(
+                            onDoubleTap = { doubleTapGesture ->
+                                manipulatedTargetIndex = viewModel.getIndexFromAngle(
+                                    doubleTapGesture,
+                                    size,
+                                    ROUND_ANGLE / targetList.size
+                                )
+                            },
+                            onTap = { tapGesture ->
+                                selectedIndex = viewModel.getIndexFromAngle(
+                                    tapGesture,
+                                    size,
+                                    ROUND_ANGLE / targetList.size
+                                )
+                            }
+                        )
+                    }
                 }
         ) {
             /*
@@ -114,19 +118,8 @@ fun RouletteGameView() {
             }
         }
 
-        when (isStarted) {
-            true -> {
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_arrow),
-                    contentDescription = "Arrow Icon",
-                    modifier = Modifier
-                        .size(48.dp)
-                        .offset(0.dp, -(maxWidth / 2) + 15.dp),
-                    tint = Color.Unspecified
-                )
-            }
-
-            false -> {
+        when (gameStatus) {
+            GameStatus.READY -> {
                 Box(
                     modifier = Modifier
                         .offset(0.dp, maxWidth / 2 + 20.dp)
@@ -139,10 +132,7 @@ fun RouletteGameView() {
                             color = Color.White,
                             shape = RoundedCornerShape(32.dp)
                         )
-                        .clickable {
-                            isStarted = true
-                            isFinished = false
-                        }
+                        .clickable { gameStatus = GameStatus.STARTED }
 
                 ) {
                     Text(
@@ -184,13 +174,18 @@ fun RouletteGameView() {
                     )
                 }
             }
-        }
 
+            else -> {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_arrow),
+                    contentDescription = "Arrow Icon",
+                    modifier = Modifier
+                        .size(48.dp)
+                        .offset(0.dp, -(maxWidth / 2) + 15.dp),
+                    tint = Color.Unspecified
+                )
 
-
-        when (isFinished) {
-            true -> {
-                if (isStarted) {
+                if (gameStatus == GameStatus.FINISHED) {
                     resultTarget =
                         targetList[viewModel.getResultIndex(
                             targetValue,
@@ -204,8 +199,7 @@ fun RouletteGameView() {
                                 shape = RoundedCornerShape(32.dp)
                             )
                             .clickable {
-                                isStarted = false
-                                isFinished = false
+                                gameStatus = GameStatus.READY
                                 resultTarget = ""
                                 manipulatedTargetIndex = -1
                                 targetValue = viewModel.getTargetAngle(
@@ -224,8 +218,6 @@ fun RouletteGameView() {
                     }
                 }
             }
-
-            false -> {}
         }
 
         /* Display Result target name after finished game (roulette turning) */
@@ -416,6 +408,12 @@ fun InputBoxLayer(
     SideEffect {
         focusRequester.requestFocus()
     }
+}
+
+enum class GameStatus {
+    READY,
+    STARTED,
+    FINISHED
 }
 
 @Preview
