@@ -42,6 +42,8 @@ import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.MIN_CANDIDA
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.ROUND_ANGLE
 import java.util.*
 
+private const val TIME_RESET = 1000
+private const val TIME_RUNNING = 5000
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -73,7 +75,7 @@ fun RouletteGameView() {
         val animatedProgress by animateFloatAsState(
             targetValue = if (gameStatus == GameStatus.READY) 0f else targetValue,
             animationSpec = tween(
-                durationMillis = if (gameStatus != GameStatus.READY) 3000 else 1000,
+                durationMillis = if (gameStatus != GameStatus.READY) TIME_RUNNING else TIME_RESET,
                 easing = FastOutSlowInEasing,
             ),
             finishedListener = {
@@ -122,7 +124,7 @@ fun RouletteGameView() {
             GameStatus.READY -> {
                 Box(
                     modifier = Modifier
-                        .offset(0.dp, maxWidth / 2 + 20.dp)
+                        .offset(0.dp, maxWidth / 2 + 30.dp)
                         .background(
                             color = Color.Black.copy(alpha = 0.8f),
                             shape = RoundedCornerShape(32.dp)
@@ -147,7 +149,7 @@ fun RouletteGameView() {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .offset(0.dp, (maxWidth / 2) + 20.dp),
+                        .offset(0.dp, (maxWidth / 2) + 30.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     val isMin = targetList.size > MIN_CANDIDATE
@@ -226,7 +228,7 @@ fun RouletteGameView() {
             transitionSpec = {
                 slideInVertically { it } with slideOutVertically { -it }
             },
-            modifier = Modifier.offset(0.dp, maxWidth / 2 + 20.dp)
+            modifier = Modifier.offset(0.dp, maxWidth / 2 + 30.dp)
         ) {
             Text(
                 text = it,
