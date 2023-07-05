@@ -34,7 +34,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.hackvem.games.GamesScreen
 import com.hackvem.games.LocalGameControllerProvider
 import com.hackvem.games.R
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.COLOR_LIST
@@ -79,7 +78,8 @@ fun RouletteGameView() {
             ),
             finishedListener = {
                 // it generates by any direction. so distinguishing direction required
-                gameStatus = if (gameStatus == GameStatus.READY) GameStatus.READY else GameStatus.FINISHED
+                gameStatus =
+                    if (gameStatus == GameStatus.READY) GameStatus.READY else GameStatus.FINISHED
             }
         )
 
@@ -235,9 +235,9 @@ fun RouletteGameView() {
             )
         }
 
-        /* Display input box layer when target selected only in the state of 'ready' */
-        if (selectedIndex >= 0) {
-            // only if index is positive
+        /* Display input box layer when target selected only in the state of 'READY' */
+        // only if index is positive
+        if (selectedIndex >= 0 && gameStatus == GameStatus.READY) {
             InputBoxLayer(
                 targetIndex = selectedIndex,
                 originText = targetList[selectedIndex],
@@ -246,6 +246,8 @@ fun RouletteGameView() {
                 targetList[index] = text
                 selectedIndex = -1  // remove this layer
             }
+        } else {
+            selectedIndex = -1
         }
     }
 }
