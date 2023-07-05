@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -57,8 +54,10 @@ fun RouletteGameView() {
     BackHandler(false) {}
 
     var manipulatedTargetIndex by remember { mutableStateOf(-1) }  // Manipulated Index (target)
-    val targetValue: Float =
-        viewModel.getTargetAngle(manipulatedTargetIndex, ROUND_ANGLE.toInt() / targetList.size)
+    var targetValue = viewModel.getTargetAngle(
+        manipulatedTargetIndex,
+        ROUND_ANGLE.toInt() / targetList.size
+    )
 
     var resultTarget by remember { mutableStateOf("") }
 
@@ -193,7 +192,10 @@ fun RouletteGameView() {
             true -> {
                 if (isStarted) {
                     resultTarget =
-                        targetList[viewModel.getResultIndex(targetValue,ROUND_ANGLE / targetList.size)]
+                        targetList[viewModel.getResultIndex(
+                            targetValue,
+                            ROUND_ANGLE / targetList.size
+                        )]
                     // Let 'Restart button' visible
                     Box(
                         modifier = Modifier
@@ -204,8 +206,12 @@ fun RouletteGameView() {
                             .clickable {
                                 isStarted = false
                                 isFinished = false
-                                manipulatedTargetIndex = -1
                                 resultTarget = ""
+                                manipulatedTargetIndex = -1
+                                targetValue = viewModel.getTargetAngle(
+                                    manipulatedTargetIndex,
+                                    ROUND_ANGLE.toInt() / targetList.size
+                                )
                             }
                     ) {
                         Text(
