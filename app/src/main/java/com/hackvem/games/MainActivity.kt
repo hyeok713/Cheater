@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -16,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -70,11 +74,23 @@ fun GamesScreen() {
 
 @Composable
 private fun GameBox(type: GameType, onClick: (GameType) -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    val animatedProgress: Float by animateFloatAsState(
+        targetValue = if (pressed) 1.2f else 1f,
+        animationSpec = tween(
+            durationMillis = 300,
+            easing = FastOutSlowInEasing,
+        ),
+    )
     Box(
         modifier = Modifier
+            .scale(animatedProgress)
             .background(color = Color.Transparent, shape = RoundedCornerShape(36.dp))
             .border(width = 4.dp, color = Color.Black, shape = RoundedCornerShape(36.dp))
-            .noRippleClickable { onClick(type) },
+            .noRippleClickable(
+                onPress = { pressed = it },
+                onClick = { onClick(type) }
+            ),
     ) {
         Text(
             text = stringResource(type.id),

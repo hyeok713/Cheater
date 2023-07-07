@@ -9,13 +9,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 
 fun Modifier.noRippleClickable(
-    onPressed: ((Boolean) -> Unit)? = null,
+    onPress: ((Boolean) -> Unit)? = null,
     onClick: () -> Unit,
 ): Modifier = composed {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
 
-    if (onPressed != null) onPressed(isPressed)
+    if (onPress != null) onPress(isPressed)
 
     clickable(
         indication = null,

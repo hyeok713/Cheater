@@ -71,7 +71,7 @@ fun RouletteGameView() {
     ) {
         var selectedIndex by remember { mutableStateOf(-1) } // Selected Index for label setting
 
-        val animatedProgress by animateFloatAsState(
+        val animatedProgress: Float by animateFloatAsState(
             targetValue = if (gameStatus == GameStatus.READY) 0f else targetValue,
             animationSpec = tween(
                 durationMillis = if (gameStatus != GameStatus.READY) TIME_RUNNING else TIME_RESET,
@@ -216,7 +216,7 @@ private fun StartButton(id: Int = R.string.start, onClick: () -> Unit) {
                 shape = RoundedCornerShape(32.dp)
             )
             .noRippleClickable(
-                onPressed = {
+                onPress = {
                     pressed = it
                 },
                 onClick = { onClick() }
@@ -249,7 +249,7 @@ private fun AdjustableButton(iconId: Int, isVisible: Boolean, onClick: () -> Uni
             .padding(8.dp)
             .alpha(if (!isVisible) 0f else 1f)
             .noRippleClickable(
-                onPressed = { if (isVisible) pressed = it },
+                onPress = { if (isVisible) pressed = it },
                 onClick = { if (isVisible) onClick() }
             ),
         painter = painterResource(id = iconId),
