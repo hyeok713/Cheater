@@ -4,5 +4,6 @@
     <string name="enter_target">Enter target name</string>
     <string name="restart">RE-START</string>
     <string name="start">START!</string>
+    <string name="info_roulette">You can manipulate game result.\n \'DOUBLE TAP\' to set target!</string>
 
 </resources>

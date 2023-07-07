@@ -79,15 +79,7 @@ class RouletteViewModel @Inject constructor(): ViewModel() {
             angleDegrees + 180f
         }
 
-        /**
-         * when a section of roulette selected
-         * it launches and calculate which target it is
-         * then process let user input the target name indicating
-         */
-        val selectedIndex = (map / angle).toInt()
-        println("selectedIndex: $selectedIndex")
-
-        return selectedIndex
+        return (map / angle).toInt()
     }
 
     /**

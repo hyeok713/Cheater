@@ -3,10 +3,10 @@ package com.hackvem.games
 import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,7 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.hackvem.games.screen.roulette.InputBoxLayer
+import com.hackvem.games.ui.theme.ext.noRippleClickable
 import dagger.hilt.android.AndroidEntryPoint
 
 /**
@@ -34,6 +34,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
+            BackHandler(false) {}
             CompositionLocalProvider(LocalGameControllerProvider provides GameController()) {
                 GamesScreen()
             }
@@ -73,7 +74,7 @@ private fun GameBox(type: GameType, onClick: (GameType) -> Unit) {
         modifier = Modifier
             .background(color = Color.Transparent, shape = RoundedCornerShape(36.dp))
             .border(width = 4.dp, color = Color.Black, shape = RoundedCornerShape(36.dp))
-            .clickable { onClick(type) },
+            .noRippleClickable { onClick(type) },
     ) {
         Text(
             text = stringResource(type.id),

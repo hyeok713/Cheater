@@ -22,6 +22,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.hackvem.games.ui.theme.ext.MaxSizeBox
 
+@Deprecated("Unused file", ReplaceWith("MemberCountView()"))
 /**
  * 사다리에 인원 배정
  *
@@ -37,7 +38,6 @@ fun LadderMatchScreen() {
 /**
  * 멤버 설정
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun MemberCountView() {

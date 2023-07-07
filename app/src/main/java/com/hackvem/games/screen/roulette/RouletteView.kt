@@ -1,13 +1,13 @@
 package com.hackvem.games.screen.roulette
 
 import android.annotation.SuppressLint
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -31,8 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hackvem.games.LocalGameControllerProvider
 import com.hackvem.games.R
@@ -40,10 +39,12 @@ import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.COLOR_LIST
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.MAX_CANDIDATE
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.MIN_CANDIDATE
 import com.hackvem.games.screen.roulette.RouletteViewModel.Companion.ROUND_ANGLE
+import com.hackvem.games.ui.theme.ext.noRippleClickable
 import java.util.*
 
 private const val TIME_RESET = 1000
 private const val TIME_RUNNING = 5000
+
 @SuppressLint("MutableCollectionMutableState")
 @OptIn(ExperimentalAnimationApi::class)
 @Composable
@@ -52,8 +53,6 @@ fun RouletteGameView() {
     val gameController = LocalGameControllerProvider.current
 
     val targetList = remember { mutableStateListOf("", "", "", "") }
-
-    BackHandler(false) {}
 
     var manipulatedTargetIndex by remember { mutableStateOf(-1) }  // Manipulated Index (target)
     var targetValue = viewModel.getTargetAngle(
@@ -122,58 +121,20 @@ fun RouletteGameView() {
 
         when (gameStatus) {
             GameStatus.READY -> {
-                Box(
-                    modifier = Modifier
-                        .offset(0.dp, maxWidth / 2 + 30.dp)
-                        .background(
-                            color = Color.Black.copy(alpha = 0.8f),
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .border(
-                            width = 2.dp,
-                            color = Color.White,
-                            shape = RoundedCornerShape(32.dp)
-                        )
-                        .clickable { gameStatus = GameStatus.STARTED }
-
-                ) {
-                    Text(
-                        text = "START",
-                        color = Color.White,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                    )
+                val minusBtnVisibility by remember {
+                    derivedStateOf { targetList.size > MIN_CANDIDATE }
                 }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .offset(0.dp, (maxWidth / 2) + 30.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    val isMin = targetList.size > MIN_CANDIDATE
-                    Icon(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .padding(end = 24.dp)
-                            .alpha(takeUnless { isMin }?.let { 0f } ?: 1f)
-                            .clickable { takeIf { isMin }?.let { targetList.removeLast() } },
-                        painter = painterResource(id = R.drawable.ic_minus),
-                        contentDescription = "Delete Icon"
-                    )
+                val plusBtnVisibility by remember {
+                    derivedStateOf { targetList.size < MAX_CANDIDATE }
+                }
 
-
-                    val isMax = targetList.size < MAX_CANDIDATE
-                    Icon(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .padding(start = 24.dp)
-                            .alpha(takeUnless { isMax }?.let { 0f } ?: 1f)
-                            .clickable { takeIf { isMax }?.let { targetList.add("") } },
-                        painter = painterResource(id = R.drawable.ic_add),
-                        contentDescription = "Add Icon"
-                    )
+                Row(modifier = Modifier.offset(0.dp, maxWidth / 2 + 30.dp)) {
+                    AdjustableButton(iconId = R.drawable.ic_minus, minusBtnVisibility) { targetList.removeLast() }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    StartButton { gameStatus = GameStatus.STARTED }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    AdjustableButton(iconId = R.drawable.ic_add, plusBtnVisibility) { targetList.add("") }
                 }
             }
 
@@ -194,28 +155,13 @@ fun RouletteGameView() {
                             ROUND_ANGLE / targetList.size
                         )]
                     // Let 'Restart button' visible
-                    Box(
-                        modifier = Modifier
-                            .background(
-                                color = Color.Black.copy(alpha = 0.8f),
-                                shape = RoundedCornerShape(32.dp)
-                            )
-                            .clickable {
-                                gameStatus = GameStatus.READY
-                                resultTarget = ""
-                                manipulatedTargetIndex = -1
-                                targetValue = viewModel.getTargetAngle(
-                                    manipulatedTargetIndex,
-                                    ROUND_ANGLE.toInt() / targetList.size
-                                )
-                            }
-                    ) {
-                        Text(
-                            text = stringResource(R.string.restart),
-                            color = Color.White,
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                    StartButton(id = R.string.restart) {
+                        gameStatus = GameStatus.READY
+                        resultTarget = ""
+                        manipulatedTargetIndex = -1
+                        targetValue = viewModel.getTargetAngle(
+                            manipulatedTargetIndex,
+                            ROUND_ANGLE.toInt() / targetList.size
                         )
                     }
                 }
@@ -252,6 +198,64 @@ fun RouletteGameView() {
             selectedIndex = -1
         }
     }
+}
+
+
+@Composable
+private fun StartButton(id: Int = R.string.start, onClick: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    Box(
+        modifier = Modifier
+            .background(
+                color = Color.Black.copy(alpha = if (!pressed) 0.8f else 1f),
+                shape = RoundedCornerShape(32.dp)
+            )
+            .border(
+                width = 2.dp,
+                color = Color.White,
+                shape = RoundedCornerShape(32.dp)
+            )
+            .noRippleClickable(
+                onPressed = {
+                    pressed = it
+                },
+                onClick = { onClick() }
+            )
+    ) {
+        Text(
+            text = stringResource(id = id),
+            color = Color.White,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun AdjustableButton(iconId: Int, isVisible: Boolean, onClick: () -> Unit) {
+    var pressed by remember { mutableStateOf(false) }
+    LaunchedEffect(isVisible) {
+        pressed = false
+    }
+    Icon(
+        modifier = Modifier
+            .background(
+                color = if (pressed) Color.Black else Color.White,
+                shape = CircleShape
+            )
+            .size(48.dp)
+            .padding(8.dp)
+            .alpha(if (!isVisible) 0f else 1f)
+            .noRippleClickable(
+                onPressed = { if (isVisible) pressed = it },
+                onClick = { if (isVisible) onClick() }
+            ),
+        painter = painterResource(id = iconId),
+        tint = if (pressed) Color.White else Color.Black,
+        contentDescription = "Delete/Add Icon"
+    )
 }
 
 /**
@@ -352,7 +356,7 @@ fun InputBoxLayer(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(color = Color.Black.copy(alpha = 0.6f))
+            .background(color = Color.Black.copy(alpha = 0.9f))
             .clickable(
                 // ensure that the top layer doesn't intercept any click events and is completely transparent to touch events.
                 enabled = true,
