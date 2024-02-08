@@ -23,6 +23,4 @@ fun Modifier.noRippleClickable(
     ) {
         onClick()
     }
-
-
 }
